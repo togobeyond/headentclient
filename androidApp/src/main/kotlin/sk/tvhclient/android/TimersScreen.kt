@@ -66,7 +66,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import sk.tvhclient.shared.Tvh
-import sk.tvhclient.shared.formatDateFull
+import sk.tvhclient.shared.formatDateWithWeekday
 import sk.tvhclient.shared.formatTimeHm
 import sk.tvhclient.shared.model.DupDetect
 import sk.tvhclient.shared.model.DvrAutorec
@@ -320,7 +320,9 @@ internal fun TimersSection(server: TvhServer, vm: TimersViewModel = viewModel(),
                     val parts = ArrayList<String>()
                     parts += channelName(data, a.channelUuid) ?: anyCh
                     parts += daysLabel(a.daysOfWeek)
-                    parts += if (a.startMin >= 0) formatHm(a.startMin) else anyTime
+                    parts += if (a.startMin >= 0 && a.startWindowMin >= 0)
+                        formatHm(a.startMin) + "–" + formatHm(a.startWindowMin)
+                    else anyTime
                     parts += dupLabel(a.dupDetect)
                     if (!a.enabled) parts += disabled
                     RuleRow(
@@ -451,7 +453,7 @@ internal fun ScheduledSection(server: TvhServer, vm: TimersViewModel = viewModel
                         Text(e.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
-                            listOf(e.channelName, formatDateFull(e.start), formatTimeHm(e.start) + "–" + formatTimeHm(e.stop))
+                            listOf(e.channelName, formatDateWithWeekday(e.start), formatTimeHm(e.start) + "–" + formatTimeHm(e.stop))
                                 .filter { it.isNotBlank() }.joinToString(" · "),
                             style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 1
                         )
@@ -486,6 +488,16 @@ internal fun ScheduledSection(server: TvhServer, vm: TimersViewModel = viewModel
 // ---------------------------------------------------------------------------------------------
 // Form widgets
 // ---------------------------------------------------------------------------------------------
+
+/** 5-minute times of day plus "any" (-1); keeps a server value not on a 5-minute boundary. */
+private fun ruleTimeOptions(current: Int): List<String> {
+    val times = (0 until 24 * 60 step 5).toMutableList()
+    if (current in 0 until 24 * 60 && current !in times) {
+        times += current
+        times.sort()
+    }
+    return listOf("-1") + times.map { it.toString() }
+}
 
 /** Hour + minute pickers (D-pad friendly; no keyboard). [minutes] = minutes after midnight. */
 @Composable
@@ -615,13 +627,35 @@ private fun AutorecEditDialog(
         Spacer(Modifier.height(8.dp))
         DaysField(rule.daysOfWeek) { rule = rule.copy(daysOfWeek = it) }
         Spacer(Modifier.height(8.dp))
-        // start around: "any" or a time (the window itself stays at the server default)
-        val startOpts = remember { listOf("-1") + (0 until 24 * 60 step 30).map { it.toString() } }
+        // M758: Tvheadend's EPG rule has a start window: the programme must start after
+        // "start" and before "start_window". Both are times of day; -1 = any.
+        val startOpts = remember(rule.startMin) { ruleTimeOptions(rule.startMin) }
+        val endOpts = remember(rule.startWindowMin) { ruleTimeOptions(rule.startWindowMin) }
         DropdownField(stringResource(R.string.timers_field_start_around),
-            (if (rule.startMin < 0) -1 else rule.startMin / 30 * 30).toString(), startOpts,
+            rule.startMin.toString(), startOpts,
             optionLabel = { v -> val n = v.toInt(); if (n < 0) anyTime else formatHm(n) }) {
-            rule = rule.copy(startMin = it.toInt())
+            val n = it.toInt()
+            rule = if (n < 0) rule.copy(startMin = -1, startWindowMin = -1)
+                   else rule.copy(
+                       startMin = n,
+                       startWindowMin = if (rule.startWindowMin < 0)
+                           (n + 120).coerceAtMost(23 * 60 + 55) else rule.startWindowMin
+                   )
         }
+        Spacer(Modifier.height(8.dp))
+        if (rule.startMin >= 0) {
+            DropdownField(stringResource(R.string.timers_field_end_around),
+                rule.startWindowMin.toString(), endOpts,
+                optionLabel = { v -> val n = v.toInt(); if (n < 0) anyTime else formatHm(n) }) {
+                val n = it.toInt()
+                rule = if (n < 0) rule.copy(startMin = -1, startWindowMin = -1)
+                       else rule.copy(startWindowMin = n)
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+        Text(stringResource(R.string.timers_window_note),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(8.dp))
         val dupOpts = remember { listOf(DupDetect.UNIQUE, DupDetect.ALL, DupDetect.ONCE_PER_DAY, DupDetect.ONCE_PER_WEEK).map { it.toString() } }
         val curDup = if (rule.dupDetect.toString() in dupOpts) rule.dupDetect.toString() else DupDetect.ALL.toString()
@@ -639,7 +673,13 @@ private fun AutorecEditDialog(
             Spacer(Modifier.width(8.dp))
             Button(onClick = {
                 if (rule.title.isBlank()) { toast(ctx, ctx.getString(R.string.timers_title_required)); return@Button }
-                onSave(rule.copy(title = rule.title.trim(), name = rule.name.trim().ifBlank { rule.title.trim() }))
+                // Tvheadend only supports a start window when both ends are set; otherwise any time.
+                val normalized = if (rule.startMin < 0 || rule.startWindowMin < 0)
+                    rule.copy(startMin = -1, startWindowMin = -1) else rule
+                onSave(normalized.copy(
+                    title = normalized.title.trim(),
+                    name = normalized.name.trim().ifBlank { normalized.title.trim() }
+                ))
             }, modifier = Modifier.dpadFocusable(RoundedCornerShape(20.dp))) { Text(stringResource(R.string.save)) }
         }
     }

@@ -6,8 +6,6 @@ import sk.tvhclient.shared.api.DvrService
 import sk.tvhclient.shared.model.DvrAutorec
 import sk.tvhclient.shared.model.DvrTimerec
 import sk.tvhclient.shared.model.TvhServer
-import sk.tvhclient.shared.model.autorecAround
-import sk.tvhclient.shared.model.autorecWindow
 import sk.tvhclient.shared.model.resetToDefaultProfile
 
 /**
@@ -94,8 +92,8 @@ class HtspDvrService(private val server: TvhServer) : DvrService {
                 title = s(m, "title"),
                 channelUuid = l(m, "channel")?.toString() ?: "",
                 daysOfWeek = (l(m, "daysOfWeek") ?: DvrAutorec.ALL_DAYS.toLong()).toInt(),
-                startMin = autorecAround((l(m, "start") ?: -1L).toInt(), (l(m, "startWindow") ?: -1L).toInt()),   // M700
-                startWindowMin = (l(m, "startWindow") ?: -1L).toInt(),
+                startMin = (l(m, "start") ?: -1L).toInt(),          // M758: "start after"
+                startWindowMin = (l(m, "startWindow") ?: -1L).toInt(), // "start before"
                 dupDetect = (l(m, "dupDetect") ?: 0L).toInt(),
                 configName = cfg[s(m, "configId")] ?: "",
                 configNameRead = if (cfg.isEmpty()) null else cfg[s(m, "configId")],   // M710
@@ -137,16 +135,10 @@ class HtspDvrService(private val server: TvhServer) : DvrService {
         // field keeps the old channel, so -1 is sent explicitly)
         args["channelId"] = a.channelUuid.toLongOrNull() ?: -1L
         args["daysOfWeek"] = a.daysOfWeek.toLong()
-        // "Start around" (minutes after midnight; -1 = any time). M700: on add the server builds
-        // start/startWindow from approxTime itself, but updateAutorecEntry ignores approxTime and only
-        // reads start/startWindow — so an edit of the time did nothing. Both are sent explicitly now.
-        if (update) {
-            val (after, before) = autorecWindow(a.startMin)
-            args["start"] = after.toLong()
-            args["startWindow"] = before.toLong()
-        } else {
-            args["approxTime"] = a.startMin.toLong()
-        }
+        // M758: the EPG rule's start window ("start after" / "start before"); -1 = any time.
+        // Both are always sent: addAutorecEntry accepts them too (approxTime is only the old fallback).
+        args["start"] = a.startMin.toLong()
+        args["startWindow"] = a.startWindowMin.toLong()
         args["dupDetect"] = a.dupDetect.toLong()
         args["comment"] = a.comment
         if (a.configName.isNotBlank()) args["configName"] = a.configName

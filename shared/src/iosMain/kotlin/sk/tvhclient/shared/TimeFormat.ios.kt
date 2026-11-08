@@ -18,3 +18,5 @@ actual fun formatDayLabel(epochSec: Long): String =
 actual fun dateKey(epochSec: Long): String = fmt("yyyy-MM-dd", epochSec)
 
 actual fun formatDateFull(epochSec: Long): String = fmt("d.M.yyyy", epochSec)
+
+actual fun formatDateWithWeekday(epochSec: Long): String = fmt("yyyy.MM.dd (E)", epochSec)

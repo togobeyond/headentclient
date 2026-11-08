@@ -55,3 +55,6 @@ actual fun dateKey(epochSec: Long): String =
 
 actual fun formatDateFull(epochSec: Long): String =
     DateFmtCache.format("d.M.yyyy", Locale.getDefault(), epochSec * 1000)
+
+actual fun formatDateWithWeekday(epochSec: Long): String =
+    DateFmtCache.format("yyyy.MM.dd (E)", Locale.getDefault(), epochSec * 1000)

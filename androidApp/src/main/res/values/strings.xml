@@ -507,6 +507,8 @@
     <string name="timers_title_required">Enter a title</string>
     <string name="timers_channel_required">Choose a channel</string>
     <string name="timers_stop_before_start">End must be after start</string>
+    <string name="timers_field_end_around">End around (optional)</string>
+    <string name="timers_window_note">The EPG rule matches programmes that start within this time window. Choose “any time” on both ends to remove the limit.</string>
     <string name="rec_series">Record series</string>
     <string name="rec_series_cancel">Stop recording series</string>
     <string name="rec_series_done">Series rule created</string>

@@ -507,6 +507,8 @@
     <string name="timers_title_required">제목을 입력하세요</string>
     <string name="timers_channel_required">채널을 선택하세요</string>
     <string name="timers_stop_before_start">종료는 시작 이후여야 합니다</string>
+    <string name="timers_field_end_around">종료 시각 대략(선택)</string>
+    <string name="timers_window_note">EPG 규칙은 프로그램 시작 시각이 이 시간대 안에 있을 때 적용됩니다. 양쪽 모두 “모든 시간”이면 제한이 없습니다.</string>
     <string name="rec_series">시리즈 녹화</string>
     <string name="rec_series_cancel">시리즈 녹화 중지</string>
     <string name="rec_series_done">시리즈 규칙 생성됨</string>

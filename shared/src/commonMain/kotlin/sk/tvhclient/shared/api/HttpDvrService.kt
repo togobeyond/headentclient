@@ -9,8 +9,6 @@ import sk.tvhclient.shared.model.DupDetect
 import sk.tvhclient.shared.model.DvrAutorec
 import sk.tvhclient.shared.model.DvrTimerec
 import sk.tvhclient.shared.model.TvhServer
-import sk.tvhclient.shared.model.autorecAround
-import sk.tvhclient.shared.model.autorecWindow
 import sk.tvhclient.shared.model.resetToDefaultProfile
 import sk.tvhclient.shared.model.formatHm
 import sk.tvhclient.shared.model.maskToWeekdays
@@ -128,8 +126,8 @@ class HttpDvrService(private val server: TvhServer) : DvrService {
                 title = str(o, "title"),
                 channelUuid = str(o, "channel"),
                 daysOfWeek = days(o),
-                startMin = autorecAround(parseHm(str(o, "start")), parseHm(str(o, "start_window"))),   // M700
-                startWindowMin = parseHm(str(o, "start_window")),
+                startMin = parseHm(str(o, "start")),          // M758: "start after"
+                startWindowMin = parseHm(str(o, "start_window")), // "start before"
                 dupDetect = int(o, "record", DupDetect.ALL),
                 configName = cfg.nameOf(str(o, "config_name")),
                 configNameRead = if (cfg.isEmpty()) null else cfg.nameOf(str(o, "config_name")),   // M710
@@ -170,11 +168,10 @@ class HttpDvrService(private val server: TvhServer) : DvrService {
         m["title"] = JsonPrimitive(a.title)
         m["channel"] = JsonPrimitive(a.channelUuid)
         m["weekdays"] = weekdaysJson(a.daysOfWeek)
-        // M700: "start after" / "start before" = ±15 min around the chosen time, "" = any
-        // (the setter treats a non-digit value as -1)
-        val (after, before) = autorecWindow(a.startMin)
-        m["start"] = JsonPrimitive(formatHm(after))
-        m["start_window"] = JsonPrimitive(formatHm(before))
+        // M758: the EPG rule's start window — "start after" / "start before"; "" = any
+        // (the setter treats a non-digit value as -1).
+        m["start"] = JsonPrimitive(formatHm(a.startMin))
+        m["start_window"] = JsonPrimitive(formatHm(a.startWindowMin))
         m["record"] = JsonPrimitive(a.dupDetect)
         m["comment"] = JsonPrimitive(a.comment)
         if (a.serieslink.isNotBlank()) m["serieslink"] = JsonPrimitive(a.serieslink)   // M704

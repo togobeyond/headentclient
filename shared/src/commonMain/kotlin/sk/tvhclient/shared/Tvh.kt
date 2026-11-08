@@ -278,3 +278,6 @@ expect fun dateKey(epochSec: Long): String
 
 /** Human-readable date "14.6.2026" in local time. */
 expect fun formatDateFull(epochSec: Long): String
+
+/** Date with the short weekday, e.g. "2026.11.10 (화)", in local time. */
+expect fun formatDateWithWeekday(epochSec: Long): String
