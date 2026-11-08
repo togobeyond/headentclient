@@ -403,6 +403,13 @@
     <string name="dvr_stop_title">녹화를 중지할까요?</string>
     <string name="dvr_stop_msg">%1$s은(는) 지금 녹화 중입니다. 중지해도 지금까지 녹화된 부분은 남습니다.</string>
     <string name="dvr_stop_done">녹화를 중지했습니다</string>
+    <string name="purge_removed_title">삭제된 녹화 정리</string>
+    <string name="purge_removed_none">정리할 삭제된 녹화가 없습니다.</string>
+    <string name="purge_removed_confirm">서버에 남아 있는 삭제된 녹화 %1$d개를 영구 삭제할까요? 파일은 이미 없고 목록 기록만 제거됩니다.</string>
+    <string name="purge_removed_done">삭제된 녹화 %1$d개를 정리했습니다.</string>
+    <string name="purge_removed_partial">%1$d개 정리, %2$d개 실패</string>
+    <string name="purge_removed_load_failed">삭제된 녹화 목록을 읽지 못했습니다.</string>
+    <string name="purge_removed_working">정리 중…</string>
     <string name="epg_recording_badge">녹화 중</string>
     <string name="epg_scheduled_badge">예약됨</string>
     <string name="dvr_rec_duplicate">이 프로그램은 이미 녹화 예약되어 있습니다: %1$s, %2$s</string>

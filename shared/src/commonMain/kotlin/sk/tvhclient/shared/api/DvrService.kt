@@ -73,3 +73,9 @@ interface DvrService {
 
 /** M472: DVR profile (recording configuration) on the server. */
 data class DvrConfig(val uuid: String, val name: String)
+
+/**
+ * A DVR entry the server keeps after its file has been deleted ("Removed recordings").
+ * The archive hides these (fileSize <= 0), so they can only be cleaned up explicitly.
+ */
+data class RemovedRecording(val uuid: String, val title: String)

@@ -426,6 +426,31 @@ class TvhApi(
         }.dedupByUuid()
 
     /**
+     * Removed recordings — DVR entries the server keeps after their file was deleted
+     * (grid_removed). The archive hides them, so without an explicit purge they would
+     * stay in the server's database forever.
+     */
+    suspend fun removedRecordings(): List<RemovedRecording> =
+        apiGetAll("api/dvr/entry/grid_removed", pageLimit = 500).mapNotNull { o ->
+            val uuid = (o["uuid"] as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
+                ?: return@mapNotNull null
+            val title = (o["disp_title"] as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
+                ?: (o["title"] as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
+                ?: uuid
+            RemovedRecording(uuid, title)
+        }.distinctBy { it.uuid }
+
+    /**
+     * Permanently removes one removed recording from the server's database
+     * (api/idnode/delete). Unlike HTSP deleteDvrEntry this also drops entries whose
+     * file is already gone — the same call the Tvheadend web UI uses for its
+     * "Removed recordings" tab.
+     */
+    suspend fun deleteRemovedRecording(uuid: String) {
+        apiPost("api/idnode/delete", mapOf("uuid" to uuid))
+    }
+
+    /**
      * M472: POST to the JSON API. Tvheadend takes the parameters as form fields
      * (application/x-www-form-urlencoded) and returns a JSON object.
      */

@@ -403,6 +403,13 @@
     <string name="dvr_stop_title">Stop recording?</string>
     <string name="dvr_stop_msg">%1$s is being recorded right now. Stopping keeps the part recorded so far.</string>
     <string name="dvr_stop_done">Recording stopped</string>
+    <string name="purge_removed_title">Clean up removed recordings</string>
+    <string name="purge_removed_none">There are no removed recordings to clean up.</string>
+    <string name="purge_removed_confirm">Permanently delete %1$d removed recordings from the server? The files are already gone; only the list entries will be removed.</string>
+    <string name="purge_removed_done">Removed recordings deleted: %1$d</string>
+    <string name="purge_removed_partial">Deleted %1$d, failed %2$d</string>
+    <string name="purge_removed_load_failed">Could not read the removed recordings</string>
+    <string name="purge_removed_working">Deleting…</string>
     <string name="epg_recording_badge">Recording now</string>
     <string name="epg_scheduled_badge">Scheduled</string>
     <string name="dvr_rec_duplicate">This programme is already set to record: %1$s, %2$s</string>

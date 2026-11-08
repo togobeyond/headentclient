@@ -171,6 +171,7 @@ internal fun DvrDeleteDialog(vm: DvrViewModel) {
 fun DvrScreen(vm: DvrViewModel = viewModel(), resetSignal: Int = 0) {
     val state by vm.state.collectAsState()
     val context = LocalContext.current
+    val server = remember { Tvh.store.active() }
     // M589: a refresh keeps the old data, so with an unchanged archive nothing was visible —
     // the button turns into a spinner during the load and failure is reported by a message
     val refreshing by vm.refreshing.collectAsState()
@@ -335,6 +336,7 @@ fun DvrScreen(vm: DvrViewModel = viewModel(), resetSignal: Int = 0) {
                     )
                 }
             }
+            RemovedCleanupButton(server = server, onDone = { vm.refresh() })
         }
         val contentFocus = remember { FocusRequester() }
         // After a load / level change, put focus on the content (the first folder), so that
@@ -1371,6 +1373,7 @@ fun TvArchiveScreen(vm: DvrViewModel = viewModel(), onBack: () -> Unit) {
                 modifier = Modifier.weight(1f).padding(horizontal = 20.dp, vertical = 12.dp)
             )
             ArcReloadButton(loading = refreshingTv) { vm.refresh() }
+            RemovedCleanupButton(server = server, onDone = { vm.refresh() })
         }
         Row(Modifier.fillMaxSize()) {
             LazyColumn(
