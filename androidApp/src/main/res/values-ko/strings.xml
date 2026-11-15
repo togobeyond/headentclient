@@ -516,6 +516,10 @@
     <string name="dvr_scheduled_empty">예약된 녹화가 없습니다</string>
     <string name="dvr_cancel_rec_title">녹화를 취소할까요?</string>
     <string name="dvr_cancel_rec_msg">\"%1$s\"은(는) 녹화되지 않습니다.</string>
+    <string name="dvr_cancel_running_title">녹화를 취소할까요?</string>
+    <string name="dvr_cancel_running_msg">%1$s은(는) 지금 녹화 중입니다. 취소하면 녹화가 중지되며, 지금까지 녹화된 부분은 남습니다.</string>
+    <string name="dvr_cancel_working">취소 중…</string>
+    <string name="dvr_cancel_failed">녹화를 취소할 수 없습니다</string>
     <!-- M702: confirmation questions -->
     <string name="set_grp_confirm">확인</string>
     <string name="confirm_exit_app">앱 종료 전에 묻기</string>

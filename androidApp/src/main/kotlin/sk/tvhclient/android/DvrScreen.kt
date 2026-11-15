@@ -167,6 +167,65 @@ internal fun DvrDeleteDialog(vm: DvrViewModel) {
     )
 }
 
+/**
+ * M759: a request to cancel a recording that is currently running. A long press in the
+ * "Recording now" list asks first; DvrController.cancel stops it gracefully (the part
+ * recorded so far is kept).
+ */
+internal object DvrCancelRequest {
+    var pending by mutableStateOf<DvrEntry?>(null)
+    var allowed by mutableStateOf(false)
+
+    fun ask(entry: DvrEntry) { if (allowed) pending = entry }
+}
+
+@Composable
+internal fun DvrCancelDialog(vm: DvrViewModel) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        val srv = Tvh.store.active()
+        DvrCancelRequest.allowed = srv != null && DvrController.access(srv).canRecord
+    }
+    val entry = DvrCancelRequest.pending ?: return
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { if (!busy) DvrCancelRequest.pending = null },
+        title = { Text(stringResource(R.string.dvr_cancel_running_title)) },
+        text = { Text(stringResource(R.string.dvr_cancel_running_msg, entry.title)) },
+        confirmButton = {
+            androidx.compose.material3.TextButton(
+                enabled = !busy,
+                onClick = {
+                    val srv = Tvh.store.active() ?: return@TextButton
+                    busy = true
+                    scope.launch {
+                        val r = DvrController.cancel(srv, entry)
+                        busy = false
+                        DvrCancelRequest.pending = null
+                        android.widget.Toast.makeText(
+                            context,
+                            if (r.success) context.getString(R.string.dvr_rec_cancelled)
+                            else ConnLimitText.of(context, r.error) ?: context.getString(
+                                if (r.timeout) R.string.err_timeout else R.string.dvr_cancel_failed
+                            ),
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                        if (r.success) vm.refresh()
+                    }
+                }
+            ) {
+                Text(stringResource(if (busy) R.string.dvr_cancel_working else R.string.dvr_rec_cancel_button))
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(enabled = !busy, onClick = { DvrCancelRequest.pending = null }) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
 @Composable
 fun DvrScreen(vm: DvrViewModel = viewModel(), resetSignal: Int = 0) {
     val state by vm.state.collectAsState()
@@ -278,6 +337,7 @@ fun DvrScreen(vm: DvrViewModel = viewModel(), resetSignal: Int = 0) {
     }
 
     DvrDeleteDialog(vm)   // M483: deleting a recording (long press on an item)
+    DvrCancelDialog(vm)   // M759: cancelling a running recording (long press in Recording now)
 
     Column(Modifier.fillMaxSize()) {
         // Searching recordings (across all of them, by title) — the keyboard only after OK
@@ -401,10 +461,10 @@ private fun DvrContent(
 ) {
     val server = remember { Tvh.store.active() }
     val timersOn = TimersPref.stateOf(context).value   // M696
-    // M728: one running recording is played straight away, several open their list
-    val openRecordingNow: () -> Unit = {
-        if (recording.size == 1) playDvrFile(context, recording.first()) else onNav(DvrNav.RecordingNow)
-    }
+    // M759: always open the list; a tap on a running recording starts playback there.
+    // A single recording used to be played immediately, so there was no way to reach the
+    // list (and the long-press cancel) when only one recording was running.
+    val openRecordingNow: () -> Unit = { onNav(DvrNav.RecordingNow) }
     val recNowSub: String = recording.singleOrNull()?.let { r ->
         listOf(r.title, r.channelName).filter { it.isNotBlank() }.joinToString(" · ")
     } ?: "${recording.size}"
@@ -535,7 +595,8 @@ private fun DvrContent(
         is DvrNav.RecordingNow -> {
             val sorted = remember(recording) { recording.sortedBy { it.start } }
             RecordingList(sorted, context, progressTick, header = stringResource(R.string.dvr_recording_now),
-                viewMode = viewMode, onPlay = { playDvrFile(context, it) })
+                viewMode = viewMode, onPlay = { playDvrFile(context, it) },
+                onLongClick = { DvrCancelRequest.ask(it) })
         }
         is DvrNav.Timers -> if (server != null) TimersSection(server, header = true)         // M696
 
@@ -763,7 +824,9 @@ private fun RecordingList(
     /** M728: a header for every day (the list must be sorted by start). */
     dayHeaders: Boolean = false,
     /** M728: what a tap does (a running recording plays from the start, playDvrFile). */
-    onPlay: ((DvrEntry) -> Unit)? = null
+    onPlay: ((DvrEntry) -> Unit)? = null,
+    /** M759: what a long press does; the Recording now list cancels the running recording. */
+    onLongClick: (DvrEntry) -> Unit = { DvrDeleteRequest.ask(it) }
 ) {
     // M728: the list split into days (the key of a day = yyyyMMdd), only when asked for
     val days: List<Pair<String, List<DvrEntry>>> = remember(list, dayHeaders) {
@@ -781,7 +844,7 @@ private fun RecordingList(
             for ((key, day) in days) {
                 if (dayHeaders) item("day_$key") { DayHeader(dayLabel(day)) }
                 items(day, key = { it.uuid }) { entry ->
-                    RecordingRow(entry, context, progressTick, onPlay)
+                    RecordingRow(entry, context, progressTick, onPlay, onLongClick)
                 }
             }
         }
@@ -795,7 +858,7 @@ private fun RecordingList(
                 for ((key, day) in days) {
                     if (dayHeaders) item(key = "day_$key", span = { GridItemSpan(maxLineSpan) }) { DayHeader(dayLabel(day)) }
                     gridItems(day, key = { it.uuid }) { entry ->
-                        RecordingCard(entry, context, progressTick, onPlay)
+                        RecordingCard(entry, context, progressTick, onPlay, onLongClick)
                     }
                 }
             }
@@ -855,7 +918,9 @@ internal fun playDvr(context: Context, entry: DvrEntry) {
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun RecordingCard(entry: DvrEntry, context: Context, progressTick: Int, onPlay: ((DvrEntry) -> Unit)? = null) {
+private fun RecordingCard(entry: DvrEntry, context: Context, progressTick: Int,
+                          onPlay: ((DvrEntry) -> Unit)? = null,
+                          onLongClick: (DvrEntry) -> Unit = { DvrDeleteRequest.ask(it) }) {
     val play: () -> Unit = { if (onPlay != null) onPlay(entry) else playDvr(context, entry) }   // M728
     val server = remember { Tvh.store.active() }
     val info = remember(entry.uuid, progressTick) {
@@ -879,7 +944,7 @@ private fun RecordingCard(entry: DvrEntry, context: Context, progressTick: Int, 
             // M483: long press = offer to delete the recording
             .combinedClickable(
                 onClick = { play() },
-                onLongClick = { DvrDeleteRequest.ask(entry) }
+                onLongClick = { onLongClick(entry) }
             )
             .then(if (modernRec) Modifier.padding(6.dp) else Modifier),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -948,7 +1013,9 @@ object DvrViewPref {
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun RecordingRow(entry: DvrEntry, context: Context, progressTick: Int, onPlay: ((DvrEntry) -> Unit)? = null) {
+private fun RecordingRow(entry: DvrEntry, context: Context, progressTick: Int,
+                         onPlay: ((DvrEntry) -> Unit)? = null,
+                         onLongClick: (DvrEntry) -> Unit = { DvrDeleteRequest.ask(it) }) {
     val play: () -> Unit = { if (onPlay != null) onPlay(entry) else playDvr(context, entry) }   // M728
     val server = remember { Tvh.store.active() }
     val info = remember(entry.uuid, progressTick) {
@@ -970,10 +1037,10 @@ private fun RecordingRow(entry: DvrEntry, context: Context, progressTick: Int, o
                 else Modifier.dpadFocusable()
             )
             .playOnMediaKey { play() }
-            // M483: long press = offer to delete the recording
+            // M483: long press = offer to delete the recording; M759: in Recording now it cancels it
             .combinedClickable(
                 onClick = { play() },
-                onLongClick = { DvrDeleteRequest.ask(entry) }
+                onLongClick = { onLongClick(entry) }
             )
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -1357,6 +1424,7 @@ fun TvArchiveScreen(vm: DvrViewModel = viewModel(), onBack: () -> Unit) {
     }
 
     DvrDeleteDialog(vm)   // M483: deleting a recording (long OK -> info -> Delete)
+    DvrCancelDialog(vm)   // M759: cancelling a running recording (long press in Recording now)
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         // M530: the heading on the left, the manual refresh top right. The archive also refreshes itself
@@ -1411,7 +1479,8 @@ fun TvArchiveScreen(vm: DvrViewModel = viewModel(), onBack: () -> Unit) {
                     selKey == "_recnow" -> {   // M728 (issue #34): OK = from the start while it records
                         ArcFolderHeader(stringResource(R.string.dvr_recording_now))
                         ArcRecGrid(loaded.recording.sortedBy { it.start }, loaded, loader, context, progressTick,
-                            onPlay = { playDvrFile(context, it) })
+                            onPlay = { playDvrFile(context, it) },
+                            onLong = { DvrCancelRequest.ask(it) })
                     }
                     selKey == "_scheduled" && server != null -> {   // M696
                         ArcFolderHeader(stringResource(R.string.dvr_scheduled))
@@ -1501,6 +1570,8 @@ fun TvArchiveScreen(vm: DvrViewModel = viewModel(), onBack: () -> Unit) {
 private fun ColumnScope.ArcRecGrid(list: List<DvrEntry>, loaded: DvrState.Loaded, loader: coil.ImageLoader, context: Context, progressTick: Int,
                                    /** M728: a running recording plays from the start (playDvrFile). */
                                    onPlay: ((DvrEntry) -> Unit)? = null,
+                                   /** M759: long press; the Recording now grid cancels the running recording. */
+                                   onLong: ((DvrEntry) -> Unit)? = null,
                                    autoFocus: Boolean = true) {
     // M740 (audit B11): the first card takes the focus ONCE, when the grid appears — not again
     // whenever a refresh or the Recent re-order puts another recording first
@@ -1513,7 +1584,8 @@ private fun ColumnScope.ArcRecGrid(list: List<DvrEntry>, loaded: DvrState.Loaded
             // on the first programme, not hop back to "Recently watched"
             Box(Modifier.arcAutoFocus(!grabbed.value && e.uuid == list.firstOrNull()?.uuid) { grabbed.value = true }) {
                 ArcRecCard(e, loaded.channelPicons[e.channelName], loader, context, progressTick,
-                    onFocus = { focused = e }, onClick = { if (onPlay != null) onPlay(e) else playDvr(context, e) }, onLong = { infoEntry = e })
+                    onFocus = { focused = e }, onClick = { if (onPlay != null) onPlay(e) else playDvr(context, e) },
+                    onLong = { if (onLong != null) onLong(e) else infoEntry = e })
             }
         }
     }

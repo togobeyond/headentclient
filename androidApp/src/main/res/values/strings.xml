@@ -516,6 +516,10 @@
     <string name="dvr_scheduled_empty">No scheduled recordings</string>
     <string name="dvr_cancel_rec_title">Cancel recording?</string>
     <string name="dvr_cancel_rec_msg">\"%1$s\" will not be recorded.</string>
+    <string name="dvr_cancel_running_title">Cancel recording?</string>
+    <string name="dvr_cancel_running_msg">%1$s is being recorded right now. Cancelling stops the recording; the part recorded so far is kept.</string>
+    <string name="dvr_cancel_working">Cancelling…</string>
+    <string name="dvr_cancel_failed">Could not cancel the recording</string>
     <!-- M702: confirmation questions -->
     <string name="set_grp_confirm">Confirmations</string>
     <string name="confirm_exit_app">Ask before exiting the app</string>
