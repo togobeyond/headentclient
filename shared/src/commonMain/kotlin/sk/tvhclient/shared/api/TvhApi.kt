@@ -434,14 +434,6 @@ class TvhApi(
         apiGetAll("api/dvr/entry/grid_removed", pageLimit = 500).mapNotNull { o ->
             val uuid = (o["uuid"] as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
                 ?: return@mapNotNull null
-            // M761: these rows suppress an autorec from scheduling the same episode again.
-            // They are intentionally permanent markers, not ordinary stale removed entries;
-            // never offer them to the bulk cleanup action.
-            val errorCode = (o["errorcode"] as? JsonPrimitive)?.content?.toIntOrNull()
-            val status = (o["status"] as? JsonPrimitive)?.content.orEmpty()
-            if (errorCode == 109 || status.equals("Previously recorded", ignoreCase = true)) {
-                return@mapNotNull null
-            }
             val title = (o["disp_title"] as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
                 ?: (o["title"] as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
                 ?: uuid

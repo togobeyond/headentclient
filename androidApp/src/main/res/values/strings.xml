@@ -405,7 +405,7 @@
     <string name="dvr_stop_msg">%1$s is being recorded right now. Stopping keeps the part recorded so far.</string>
     <string name="dvr_stop_done">Recording stopped</string>
     <string name="purge_removed_title">Clean up removed recordings</string>
-    <string name="purge_removed_none">There are no removed recordings to clean up. Previously-recorded markers are kept so autorec rules do not schedule those episodes again.</string>
+    <string name="purge_removed_none">There are no removed recordings to clean up.</string>
     <string name="purge_removed_confirm">Permanently delete %1$d removed recordings from the server? The files are already gone; only the list entries will be removed.</string>
     <string name="purge_removed_done">Removed recordings deleted: %1$d</string>
     <string name="purge_removed_partial">Deleted %1$d, failed %2$d</string>
