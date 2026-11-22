@@ -405,7 +405,7 @@
     <string name="dvr_stop_msg">%1$s은(는) 지금 녹화 중입니다. 중지해도 지금까지 녹화된 부분은 남습니다.</string>
     <string name="dvr_stop_done">녹화를 중지했습니다</string>
     <string name="purge_removed_title">삭제된 녹화 정리</string>
-    <string name="purge_removed_none">정리할 삭제된 녹화가 없습니다.</string>
+    <string name="purge_removed_none">정리할 삭제된 녹화가 없습니다. 규칙이 해당 회차를 다시 예약하지 않도록 이전 녹화됨 표시는 유지됩니다.</string>
     <string name="purge_removed_confirm">서버에 남아 있는 삭제된 녹화 %1$d개를 영구 삭제할까요? 파일은 이미 없고 목록 기록만 제거됩니다.</string>
     <string name="purge_removed_done">삭제된 녹화 %1$d개를 정리했습니다.</string>
     <string name="purge_removed_partial">%1$d개 정리, %2$d개 실패</string>
