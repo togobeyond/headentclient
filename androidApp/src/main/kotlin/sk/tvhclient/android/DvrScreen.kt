@@ -130,7 +130,14 @@ internal fun DvrDeleteDialog(vm: DvrViewModel) {
     androidx.compose.material3.AlertDialog(
         onDismissRequest = { if (!busy) DvrDeleteRequest.pending = null },
         title = { Text(stringResource(R.string.dvr_del_title)) },
-        text = { Text(stringResource(R.string.dvr_del_msg, entry.title)) },
+        text = {
+            Text(
+                stringResource(
+                    if (entry.isRecordingNow) R.string.dvr_del_running_msg else R.string.dvr_del_msg,
+                    entry.title
+                )
+            )
+        },
         confirmButton = {
             androidx.compose.material3.TextButton(
                 enabled = !busy,
@@ -149,7 +156,9 @@ internal fun DvrDeleteDialog(vm: DvrViewModel) {
                             ),
                             android.widget.Toast.LENGTH_SHORT
                         ).show()
-                        if (r.success) vm.refresh()
+                        // Deleting a running item first stops it. Refresh even if a later
+                        // marker/file-removal step fails, so the stopped state is visible.
+                        if (r.success || entry.isRecordingNow) vm.refresh()
                     }
                 }
             ) {

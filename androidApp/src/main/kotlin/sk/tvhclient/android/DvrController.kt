@@ -285,8 +285,36 @@ object DvrController {
             if (it.success) { invalidateScheduled(server.id); forgetEntry(server.id, entry) }
         }
 
-    suspend fun delete(server: TvhServer, entry: sk.tvhclient.shared.model.DvrEntry): DvrResult =
-        delete(server, entry.commandId).also { if (it.success) forgetEntry(server.id, entry) }
+    suspend fun delete(server: TvhServer, entry: sk.tvhclient.shared.model.DvrEntry): DvrResult {
+        if (!entry.isRecordingNow) {
+            return delete(server, entry.commandId).also {
+                if (it.success) forgetEntry(server.id, entry)
+            }
+        }
+
+        // M761: deleting a running autorec spawn with deleteDvrEntry can remove its DVR
+        // record, after which Tvheadend sees the same EPG event as eligible and schedules it
+        // again. First stop gracefully, then persist a "previously recorded" marker before
+        // deleting the partial media file.
+        val stopped = ioResult { serviceFor(server).stop(entry.commandId) }
+        if (!stopped.success) return stopped
+
+        val result = ioResult {
+            val api = sk.tvhclient.shared.Tvh.apiFor(server)
+            try {
+                api.deleteRecordingAndKeepPreviousMarker(entry.uuid)
+                DvrResult.OK
+            } catch (e: Throwable) {
+                DvrResult.fail(e.message)
+            } finally {
+                api.close()
+            }
+        }
+
+        invalidateScheduled(server.id)
+        if (result.success) forgetEntry(server.id, entry)
+        return result
+    }
 
     /** M484: hide a cancelled/deleted entry until the server stops sending it. */
     private fun forgetEntry(serverId: String, entry: sk.tvhclient.shared.model.DvrEntry) {

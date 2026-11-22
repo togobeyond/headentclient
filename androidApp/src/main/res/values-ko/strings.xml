@@ -395,6 +395,7 @@
     <string name="buf_large">크게 (약한 Wi‑Fi / 모바일)</string>
     <string name="dvr_del_title">녹화를 삭제할까요?</string>
     <string name="dvr_del_msg">%1$s이(가) 파일과 함께 서버에서 영구적으로 삭제됩니다.</string>
+    <string name="dvr_del_running_msg">%1$s은(는) 녹화 중입니다. 삭제하면 녹화를 중지하고 현재까지의 파일을 삭제하며, 같은 EPG 회차가 규칙에 의해 다시 예약되지 않도록 이전 녹화됨으로 표시합니다.</string>
     <string name="dvr_del_done">녹화를 삭제했습니다</string>
     <string name="dvr_del_failed">녹화를 삭제할 수 없습니다</string>
     <string name="dvr_del_working">삭제 중…</string>

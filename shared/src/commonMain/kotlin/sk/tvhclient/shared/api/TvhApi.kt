@@ -451,6 +451,28 @@ class TvhApi(
     }
 
     /**
+     * M761: remove an in-progress recording without letting its EPG autorec rule recreate it.
+     *
+     * Tvheadend cannot mark a recording as previously recorded while it is still recording.
+     * The caller first stops it. We then retain its DVR entry as a permanent previous-recorded
+     * marker, and remove the media file. Keeping the marker is important: deleting the DVR entry
+     * itself makes the matching EPG event eligible for autorec again.
+     */
+    suspend fun deleteRecordingAndKeepPreviousMarker(uuid: String) {
+        val marker = JsonObject(
+            mapOf(
+                "uuid" to JsonPrimitive(uuid),
+                // DVR_RET_REM_FOREVER (INT32_MAX): deleting the file must not expire the
+                // previous-recorded marker from the server's database.
+                "retention" to JsonPrimitive(Int.MAX_VALUE)
+            )
+        )
+        apiPostJson("api/idnode/save", "node", marker)
+        apiPost("api/dvr/entry/prevrec/set", mapOf("uuid" to uuid))
+        apiPost("api/dvr/entry/remove", mapOf("uuid" to uuid))
+    }
+
+    /**
      * M472: POST to the JSON API. Tvheadend takes the parameters as form fields
      * (application/x-www-form-urlencoded) and returns a JSON object.
      */

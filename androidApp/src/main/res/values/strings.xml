@@ -395,6 +395,7 @@
     <string name="buf_large">Large (weak Wi-Fi / mobile)</string>
     <string name="dvr_del_title">Delete recording?</string>
     <string name="dvr_del_msg">%1$s will be permanently deleted from the server, including the recorded file.</string>
+    <string name="dvr_del_running_msg">%1$s is still recording. Deleting it will stop the recording, remove the partial file, and mark this EPG episode as previously recorded so the rule will not schedule it again.</string>
     <string name="dvr_del_done">Recording deleted</string>
     <string name="dvr_del_failed">Could not delete the recording</string>
     <string name="dvr_del_working">Deleting…</string>
