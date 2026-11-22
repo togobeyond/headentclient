@@ -230,6 +230,7 @@ internal fun DvrCancelDialog(vm: DvrViewModel) {
 fun DvrScreen(vm: DvrViewModel = viewModel(), resetSignal: Int = 0) {
     val state by vm.state.collectAsState()
     val context = LocalContext.current
+    val timersOn = TimersPref.stateOf(context).value
     val server = remember { Tvh.store.active() }
     // M589: a refresh keeps the old data, so with an unchanged archive nothing was visible —
     // the button turns into a spinner during the load and failure is reported by a message
@@ -432,7 +433,10 @@ fun DvrScreen(vm: DvrViewModel = viewModel(), resetSignal: Int = 0) {
                                 header = stringResource(R.string.dvr_search_results) + " (${results.size})",
                                 viewMode = viewMode)
                         }
-                    } else if (s.entries.isEmpty() && s.recording.isEmpty()) {
+                    // Keep the archive navigation available when it has no recordings.
+                    // In particular, DvrContent's planning section contains Scheduled and
+                    // Timers, which must remain reachable when timers are enabled.
+                    } else if (s.entries.isEmpty() && s.recording.isEmpty() && !timersOn) {
                         EmptyStatus(stringResource(R.string.dvr_empty))
                     } else {
                         androidx.compose.runtime.key(corpusReady, imdbTick) {
